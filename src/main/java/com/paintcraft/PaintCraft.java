@@ -5,6 +5,7 @@ import com.paintcraft.block.ModBlocks;
 import com.paintcraft.blockentity.ModBlockEntities;
 import com.paintcraft.item.ModItems;
 import com.paintcraft.menu.ModMenuTypes;
+import com.paintcraft.network.ModPackets;
 import com.paintcraft.screen.PaintingScreen;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraftforge.api.distmarker.Dist;
@@ -55,7 +56,8 @@ public class PaintCraft {
      * Utilisé pour enregistrer les packets réseau.
      */
     private void commonSetup(final FMLCommonSetupEvent event) {
-        // Le réseau sera initialisé ici à l'Étape 4
+        // Enregistrement des packets réseau sur le thread principal
+        event.enqueueWork(ModPackets::register);
         LOGGER.info("PaintCraft common setup complete.");
     }
 
