@@ -6,8 +6,8 @@ import com.paintcraft.blockentity.ModBlockEntities;
 import com.paintcraft.item.ModItems;
 import com.paintcraft.menu.ModMenuTypes;
 import com.paintcraft.screen.PaintingScreen;
+import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.client.event.RegisterMenuScreensEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -68,15 +68,14 @@ public class PaintCraft {
 
         /**
          * Associe notre PaintingScreen (GUI côté client) au PaintingMenu
-         * (container côté serveur). Appelé uniquement sur le client.
+         * (container côté serveur).
+         * enqueueWork() garantit l'exécution sur le thread principal.
          */
         @SubscribeEvent
-        public static void onRegisterMenuScreens(RegisterMenuScreensEvent event) {
-            event.register(ModMenuTypes.PAINTING_MENU.get(), PaintingScreen::new);
-        }
-
-        @SubscribeEvent
         public static void onClientSetup(FMLClientSetupEvent event) {
+            event.enqueueWork(() ->
+                MenuScreens.register(ModMenuTypes.PAINTING_MENU.get(), PaintingScreen::new)
+            );
             LOGGER.info("PaintCraft client setup complete.");
         }
     }
