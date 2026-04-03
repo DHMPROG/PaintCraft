@@ -1,0 +1,134 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+    tags:
+      - "v*"           # Trigger release on any tag like v1.0.0
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 1 — Build the mod on every push / PR
+  # ─────────────────────────────────────────────────────────────────────────────
+  build:
+    name: Build mod
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout the repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Set up Java 21 (required for MC 1.21 + Forge 51)
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      # 3. Cache Gradle files to speed up subsequent runs
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # 4. Make gradlew executable (Linux runner needs this)
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # 5. Build the mod jar
+      - name: Build with Gradle
+        run: ./gradlew build --no-daemon
+        env:
+          # Suppress Gradle daemon on CI
+          GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+
+      # 6. Upload the built jar as a build artifact (available for 7 days)
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: paintcraft-mod
+          path: build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 7
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # JOB 2 — Create a GitHub Release when a v* tag is pushed
+  #          Only runs after the build job succeeds
+  # ─────────────────────────────────────────────────────────────────────────────
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: build                     # Wait for build to succeed
+    if: startsWith(github.ref, 'refs/tags/v')  # Only on version tags
+
+    permissions:
+      contents: write                # Needed to create releases
+
+    steps:
+      # 1. Checkout (needed to access the repo)
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Set up Java 21
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      # 3. Restore Gradle cache
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # 4. Build again in the release job (cache makes this fast)
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew build --no-daemon
+        env:
+          GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+
+      # 5. Extract the tag version (e.g. "v1.0.0" → "1.0.0")
+      - name: Extract version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      # 6. Create the GitHub Release and attach the mod jar
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "PaintCraft v${{ steps.version.outputs.VERSION }}"
+          tag_name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true    # Auto-generate changelog from commits
+          files: |
+            build/libs/paintcraft-*.jar
+          body: |
+            ## PaintCraft v${{ steps.version.outputs.VERSION }}
+
+            ### Installation
+            1. Download `paintcraft-${{ steps.version.outputs.VERSION }}.jar`
+            2. Drop it into your `mods/` folder
+            3. Requires **Minecraft 1.21** + **Forge 51.0.33+**
+
+            ### Changelog
+            See commit history for changes in this release.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
