@@ -1,0 +1,62 @@
+# ========================
+# Eclipse
+# ========================
+bin
+*.launch
+.settings
+.metadata
+.classpath
+.project
+eclipse
+
+# ========================
+# IntelliJ IDEA
+# ========================
+out
+*.ipr
+*.iws
+*.iml
+.idea
+
+# ========================
+# Gradle build
+# ========================
+build
+.gradle
+
+# ========================
+# Forge / Minecraft run dirs
+# ========================
+run
+run-data
+logs
+
+# Generated sources (ForgeGradle decompiled MC)
+src/generated/
+
+# Forge MDK files
+forge*changelog.txt
+
+# Local Maven repo created by publish task
+mcmodsrepo/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# Crash reports from test runs
+crash-reports/
+
+# World data from local test sessions
+run/saves/
+run/world/
+run/server.properties
+run/ops.json
+run/whitelist.json
+run/banned-*.json
+run/usercache.json
+run/eula.txt
+
