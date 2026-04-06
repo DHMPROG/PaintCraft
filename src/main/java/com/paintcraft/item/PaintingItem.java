@@ -1,17 +1,15 @@
 package com.paintcraft.item;
 
+import com.paintcraft.data.PaintingData;
 import com.paintcraft.entity.ModEntityTypes;
 import com.paintcraft.entity.WallPaintingEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -19,30 +17,21 @@ import net.minecraft.world.level.block.state.BlockState;
 import java.util.List;
 
 /**
- * Tableau peint — résultat d'une session de peinture.
+ * Tableau peint — resultat d'une session de peinture.
  *
- * MC 1.21 : les données custom sur un ItemStack passent par DataComponents.
- * On utilise DataComponents.CUSTOM_DATA (wrappé dans CustomData) à la place
- * des anciens getTag() / setTag() qui n'existent plus.
+ * MC 1.21 — Stockage via DataComponent (ModDataComponents.PAINTING_DATA)
+ * Le record PaintingData encapsule les pixels (int[256] ARGB) avec son propre
+ * Codec et StreamCodec, ce qui remplace l'ancien stockage CustomData/NBT.
  *
- * NBT stocké sous CUSTOM_DATA :
- *   "pixels" → int[256]  (couleurs ARGB du canvas 16×16)
- *
- * ─── Étape 5 : ajout de useOn() ─────────────────────────────────────────────
- * Le joueur peut poser le tableau peint sur n'importe quel mur (face verticale)
- * en faisant clic droit. Cela crée un WallPaintingEntity avec les pixels du tableau.
- *
- * Conditions de pose :
- *  1. La face cliquée doit être verticale (NORTH/SOUTH/EAST/WEST, pas UP/DOWN)
- *  2. Le tableau doit avoir au moins un pixel peint (pas de toile vierge)
- *  3. Le bloc derrière (le mur) doit être solide (vérifié par entity.survives())
- *  4. L'espace en avant du mur doit être libre (ou remplaçable)
+ * Pose murale (clic droit sur une face verticale d'un bloc) :
+ *  1. Verifie que la face est verticale et que le tableau est peint
+ *  2. Cree un WallPaintingEntity avec les pixels
+ *  3. Valide via entity.survives() et ajoute au monde
  */
 public class PaintingItem extends Item {
 
-    public static final String NBT_PIXELS = "pixels";
-    public static final int CANVAS_SIZE   = 16;
-    public static final int PIXEL_COUNT   = CANVAS_SIZE * CANVAS_SIZE; // 256
+    public static final int CANVAS_SIZE = PaintingData.CANVAS_SIZE;
+    public static final int PIXEL_COUNT = PaintingData.PIXEL_COUNT;
 
     public PaintingItem(Properties properties) {
         super(properties);
@@ -51,126 +40,83 @@ public class PaintingItem extends Item {
     // ── Factory ───────────────────────────────────────────────────────────────
 
     /**
-     * Crée un ItemStack "tableau peint" avec les pixels embarqués.
-     * Utilise CustomData.set() — API MC 1.21 pour les données NBT custom.
+     * Cree un ItemStack "tableau peint" avec les pixels embarques dans le
+     * DataComponent PAINTING_DATA.
      */
     public static ItemStack createPainting(int[] pixels) {
         ItemStack stack = new ItemStack(ModItems.PAINTING_ITEM.get());
-        CompoundTag tag = new CompoundTag();
-        tag.putIntArray(NBT_PIXELS, pixels);
-        // MC 1.21 : CustomData.set(type, stack, tag) remplace stack.setTag()
-        CustomData.set(DataComponents.CUSTOM_DATA, stack, tag);
+        stack.set(ModDataComponents.PAINTING_DATA.get(), new PaintingData(pixels.clone()));
         return stack;
     }
 
-    // ── Lecture NBT ───────────────────────────────────────────────────────────
+    // ── Lecture du composant ──────────────────────────────────────────────────
 
-    /**
-     * Extrait les pixels depuis l'ItemStack.
-     * MC 1.21 : stack.get(DataComponents.CUSTOM_DATA) remplace stack.getTag().
-     */
+    /** Retourne la PaintingData ou EMPTY si absente. */
+    public static PaintingData getPaintingData(ItemStack stack) {
+        PaintingData data = stack.get(ModDataComponents.PAINTING_DATA.get());
+        return data != null ? data : PaintingData.EMPTY;
+    }
+
+    /** Extrait les pixels (copie defensive). */
     public static int[] getPixels(ItemStack stack) {
-        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
-        if (data != null) {
-            CompoundTag tag = data.copyTag();
-            int[] pixels = tag.getIntArray(NBT_PIXELS);
-            if (pixels.length == PIXEL_COUNT) return pixels;
-        }
-        return new int[PIXEL_COUNT];
+        return getPaintingData(stack).copyPixels();
     }
 
     /** Retourne true si le tableau a au moins un pixel peint. */
     public static boolean hasPaintingData(ItemStack stack) {
-        CustomData data = stack.get(DataComponents.CUSTOM_DATA);
-        if (data == null) return false;
-        int[] pixels = data.copyTag().getIntArray(NBT_PIXELS);
-        if (pixels.length != PIXEL_COUNT) return false;
-        for (int p : pixels) if (p != 0) return true;
-        return false;
+        PaintingData data = stack.get(ModDataComponents.PAINTING_DATA.get());
+        return data != null && data.isPainted();
     }
 
-    // ── Pose sur mur (Étape 5) ────────────────────────────────────────────────
+    // ── Pose sur mur ──────────────────────────────────────────────────────────
 
-    /**
-     * Appelé quand le joueur fait clic droit sur une face de bloc avec ce tableau.
-     *
-     * Flux serveur (isClientSide = false) :
-     *  1. Vérifications (face verticale, tableau peint, espace libre)
-     *  2. Création du WallPaintingEntity avec les pixels de l'ItemStack
-     *  3. Validation via entity.survives() (mur solide)
-     *  4. Ajout au monde + son de pose
-     *  5. Consommation de l'item (sauf en mode créatif)
-     *
-     * Côté client : on retourne immédiatement sidedSuccess pour l'animation du bras.
-     *
-     * @param context Contexte d'utilisation (bloc cliqué, face, joueur, niveau, item)
-     * @return InteractionResult.sidedSuccess si posé, PASS ou FAIL sinon
-     */
     @Override
     public InteractionResult useOn(UseOnContext context) {
         Direction clickedFace = context.getClickedFace();
 
-        // ── 1. Vérification : on ne pose pas sur le dessus/dessous d'un bloc ──
+        // 1. On ne pose pas sur une face horizontale (haut/bas d'un bloc)
         if (clickedFace.getAxis() == Direction.Axis.Y) {
             return InteractionResult.PASS;
         }
 
-        // ── 2. Vérification : le tableau doit être peint ──────────────────────
+        // 2. Le tableau doit etre peint
         ItemStack stack = context.getItemInHand();
         if (!hasPaintingData(stack)) {
-            // Toile vierge → on ne peut pas la poser (renvoie PASS pour ne pas
-            // bloquer d'autres interactions potentielles)
             return InteractionResult.PASS;
         }
 
         Level level = context.getLevel();
-        BlockPos clickedPos = context.getClickedPos(); // Le bloc mur sur lequel on clique
+        BlockPos clickedPos = context.getClickedPos();
 
-        // ── 3. Côté client : on se contente d'affirmer le succès visuel ───────
-        //    La vraie logique est côté serveur.
+        // 3. Cote client : succes visuel uniquement (vraie logique cote serveur)
         if (level.isClientSide) {
             return InteractionResult.SUCCESS;
         }
 
-        // ── 4. (Serveur) Vérification : l'espace en avant du mur est libre ────
+        // 4. (Serveur) Espace en avant du mur libre ?
         BlockPos inFrontPos = clickedPos.relative(clickedFace);
         BlockState inFrontState = level.getBlockState(inFrontPos);
         if (!inFrontState.canBeReplaced()) {
-            // Espace occupé par un bloc non-remplaçable (ex : pierre, bois...)
             return InteractionResult.FAIL;
         }
 
-        // ── 5. (Serveur) Création et validation de l'entité ───────────────────
-        //
-        // WallPaintingEntity(type, level, wallBlockPos, facingDirection) :
-        //  - wallBlockPos : position du bloc mur (l'ancrage)
-        //  - facingDirection : direction de la face cliquée = sens vers lequel
-        //    la peinture fait face (ex: SOUTH si on clique sur la face sud d'un mur nord)
-        //
-        // setDirection() (appelé dans le constructeur de convenance) recalcule
-        // automatiquement la position world et la bounding box de l'entité.
+        // 5. (Serveur) Creation et validation de l'entite
         WallPaintingEntity painting = new WallPaintingEntity(
                 ModEntityTypes.WALL_PAINTING.get(),
                 level,
                 clickedPos,
                 clickedFace
         );
-
-        // Transfère les pixels de l'ItemStack vers l'entité
         painting.setPixels(getPixels(stack));
 
-        // survives() vérifie que :
-        //  - le bloc d'ancrage (clickedPos) est solide (a une face solide)
-        //  - la bounding box de l'entité ne chevauche pas d'autres entités solides
         if (!painting.survives()) {
             return InteractionResult.FAIL;
         }
 
-        // ── 6. (Serveur) Ajout au monde + son + consommation de l'item ────────
+        // 6. (Serveur) Ajout au monde + son + consommation
         level.addFreshEntity(painting);
         painting.playPlacementSound();
 
-        // En mode créatif, on ne consomme pas l'item
         if (context.getPlayer() != null && !context.getPlayer().isCreative()) {
             stack.shrink(1);
         }
@@ -180,15 +126,12 @@ public class PaintingItem extends Item {
 
     // ── Comportement item ─────────────────────────────────────────────────────
 
-    /** Effet de brillance si le tableau a été peint (feedback visuel). */
+    /** Effet de brillance si le tableau a ete peint. */
     @Override
     public boolean isFoil(ItemStack stack) {
         return hasPaintingData(stack);
     }
 
-    /**
-     * MC 1.21 : appendHoverText prend Item.TooltipContext, plus @Nullable Level.
-     */
     @Override
     public void appendHoverText(ItemStack stack, Item.TooltipContext context,
                                 List<Component> tooltip, TooltipFlag flag) {

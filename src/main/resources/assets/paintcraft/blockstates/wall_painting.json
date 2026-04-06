@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "paintcraft:block/wall_painting", "y": 180 },
+    "facing=south": { "model": "paintcraft:block/wall_painting", "y": 0   },
+    "facing=east":  { "model": "paintcraft:block/wall_painting", "y": 90  },
+    "facing=west":  { "model": "paintcraft:block/wall_painting", "y": 270 }
+  }
+}

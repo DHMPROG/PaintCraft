@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "S S",
+    "SPS",
+    "S S"
+  ],
+  "key": {
+    "S": { "item": "minecraft:stick" },
+    "P": { "item": "minecraft:oak_planks" }
+  },
+  "result": {
+    "id": "paintcraft:easel",
+    "count": 1
+  }
+}

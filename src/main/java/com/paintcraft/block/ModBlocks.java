@@ -44,6 +44,20 @@ public class ModBlocks {
             )
     );
 
+    /**
+     * Le tableau mural : bloc fin posé sur un mur, rendu par WallPaintingRenderer.
+     * Pas de BlockItem — c'est PaintingItem qui le place directement.
+     */
+    public static final RegistryObject<Block> WALL_PAINTING = BLOCKS.register("wall_painting",
+            () -> new WallPaintingBlock(
+                    BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.WOOD)
+                            .strength(0.5f, 1.0f)
+                            .sound(SoundType.WOOD)
+                            .noOcclusion()
+            )
+    );
+
     // ── BlockItems ────────────────────────────────────────────────────────
     // Chaque bloc a besoin d'un BlockItem pour exister dans l'inventaire.
 

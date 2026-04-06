@@ -1,0 +1,41 @@
+{
+  "credit": "PaintCraft Mod",
+  "textures": {
+    "front": "paintcraft:block/wall_painting",
+    "back": "paintcraft:block/wall_painting_back",
+    "side": "paintcraft:block/wall_painting_side",
+    "particle": "paintcraft:block/wall_painting"
+  },
+  "elements": [
+    {
+      "name": "painting_frame",
+      "from": [0, 0, 15],
+      "to": [16, 16, 16],
+      "faces": {
+        "north": {"uv": [0, 0, 16, 16], "texture": "#front"},
+        "south": {"uv": [0, 0, 16, 16], "texture": "#back"},
+        "east":  {"uv": [0, 0, 1, 16],  "texture": "#side"},
+        "west":  {"uv": [0, 0, 1, 16],  "texture": "#side"},
+        "up":    {"uv": [0, 0, 16, 1],  "texture": "#side"},
+        "down":  {"uv": [0, 0, 16, 1],  "texture": "#side"}
+      }
+    }
+  ],
+  "display": {
+    "gui": {
+      "rotation": [0, 0, 0],
+      "translation": [0, 0, 0],
+      "scale": [1, 1, 1]
+    },
+    "ground": {
+      "rotation": [0, 0, 0],
+      "translation": [0, 3, 0],
+      "scale": [0.25, 0.25, 0.25]
+    },
+    "fixed": {
+      "rotation": [0, 0, 0],
+      "translation": [0, 0, -0.5],
+      "scale": [1, 1, 1]
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "variants": {
+    "facing=north,half=lower,has_canvas=false": { "model": "paintcraft:block/easel_lower",        "y": 180 },
+    "facing=south,half=lower,has_canvas=false": { "model": "paintcraft:block/easel_lower",        "y": 0   },
+    "facing=east,half=lower,has_canvas=false":  { "model": "paintcraft:block/easel_lower",        "y": 90  },
+    "facing=west,half=lower,has_canvas=false":  { "model": "paintcraft:block/easel_lower",        "y": 270 },
+
+    "facing=north,half=lower,has_canvas=true":  { "model": "paintcraft:block/easel_lower",        "y": 180 },
+    "facing=south,half=lower,has_canvas=true":  { "model": "paintcraft:block/easel_lower",        "y": 0   },
+    "facing=east,half=lower,has_canvas=true":   { "model": "paintcraft:block/easel_lower",        "y": 90  },
+    "facing=west,half=lower,has_canvas=true":   { "model": "paintcraft:block/easel_lower",        "y": 270 },
+
+    "facing=north,half=upper,has_canvas=false": { "model": "paintcraft:block/easel_upper",        "y": 180 },
+    "facing=south,half=upper,has_canvas=false": { "model": "paintcraft:block/easel_upper",        "y": 0   },
+    "facing=east,half=upper,has_canvas=false":  { "model": "paintcraft:block/easel_upper",        "y": 90  },
+    "facing=west,half=upper,has_canvas=false":  { "model": "paintcraft:block/easel_upper",        "y": 270 },
+
+    "facing=north,half=upper,has_canvas=true":  { "model": "paintcraft:block/easel_upper_canvas", "y": 180 },
+    "facing=south,half=upper,has_canvas=true":  { "model": "paintcraft:block/easel_upper_canvas", "y": 0   },
+    "facing=east,half=upper,has_canvas=true":   { "model": "paintcraft:block/easel_upper_canvas", "y": 90  },
+    "facing=west,half=upper,has_canvas=true":   { "model": "paintcraft:block/easel_upper_canvas", "y": 270 }
+  }
+}

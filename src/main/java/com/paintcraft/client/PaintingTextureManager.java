@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.NativeImage;
 import com.paintcraft.PaintCraft;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -40,6 +41,12 @@ public final class PaintingTextureManager {
     // ── Cache : entityId → ResourceLocation + DynamicTexture ─────────────────
     private static final Map<Integer, ResourceLocation> LOCATIONS = new HashMap<>();
     private static final Map<Integer, DynamicTexture>   TEXTURES  = new HashMap<>();
+
+    // ── Cache : BlockPos (easel) → ResourceLocation + DynamicTexture ─────────
+    // Hash + signature de pixels pour detecter les changements et re-uploader.
+    private static final Map<BlockPos, ResourceLocation> BE_LOCATIONS  = new HashMap<>();
+    private static final Map<BlockPos, DynamicTexture>   BE_TEXTURES   = new HashMap<>();
+    private static final Map<BlockPos, Integer>          BE_PIXELS_HASH = new HashMap<>();
 
     private PaintingTextureManager() { /* Classe utilitaire — pas d'instanciation */ }
 
@@ -120,6 +127,14 @@ public final class PaintingTextureManager {
         // Les maps sont déjà vidées par release(), mais par sécurité :
         LOCATIONS.clear();
         TEXTURES.clear();
+
+        // Libere aussi les textures de chevalets (block entities)
+        for (BlockPos key : BE_LOCATIONS.keySet().stream().toList()) {
+            releaseBlock(key);
+        }
+        BE_LOCATIONS.clear();
+        BE_TEXTURES.clear();
+        BE_PIXELS_HASH.clear();
     }
 
     // =========================================================================
@@ -171,6 +186,78 @@ public final class PaintingTextureManager {
             int y = i / TEX_WIDTH;
             image.setPixelRGBA(x, y, argbToAbgr(pixels[i]));
         }
+    }
+
+    // =========================================================================
+    // API BlockEntity (chevalets) — keying par BlockPos
+    // =========================================================================
+
+    /**
+     * Retourne (en creant si necessaire) la texture dynamique pour un chevalet
+     * a une position donnee. Si les pixels ont change depuis le dernier appel,
+     * la texture existante est mise a jour in-place (pas de reallocation GPU).
+     *
+     * Appele a chaque frame par EaselBlockEntityRenderer.
+     *
+     * @param pos    position du bloc inferieur du chevalet (cle stable)
+     * @param pixels pixels ARGB courants (lus depuis le BlockEntity)
+     * @return ResourceLocation utilisable avec VertexConsumerProvider
+     */
+    public static ResourceLocation getOrCreateForBlock(BlockPos pos, int[] pixels) {
+        BlockPos key = pos.immutable();
+        DynamicTexture tex = BE_TEXTURES.get(key);
+        if (tex == null) {
+            return createForBlock(key, pixels);
+        }
+
+        // Verifie si les pixels ont change (hash rapide)
+        int newHash = java.util.Arrays.hashCode(pixels);
+        Integer oldHash = BE_PIXELS_HASH.get(key);
+        if (oldHash == null || oldHash != newHash) {
+            NativeImage img = tex.getPixels();
+            if (img != null) {
+                writePixels(img, pixels);
+                tex.upload();
+                BE_PIXELS_HASH.put(key, newHash);
+            }
+        }
+        return BE_LOCATIONS.get(key);
+    }
+
+    /** Libere la texture d'un chevalet (BE detruit, chunk decharge, etc.). */
+    public static void releaseBlock(BlockPos pos) {
+        BlockPos key = pos.immutable();
+        ResourceLocation loc = BE_LOCATIONS.remove(key);
+        DynamicTexture tex   = BE_TEXTURES.remove(key);
+        BE_PIXELS_HASH.remove(key);
+
+        if (loc != null) {
+            Minecraft.getInstance().getTextureManager().release(loc);
+        }
+        if (tex != null) {
+            tex.close();
+        }
+    }
+
+    /** Cree une nouvelle texture pour un chevalet. */
+    private static ResourceLocation createForBlock(BlockPos key, int[] pixels) {
+        NativeImage image = new NativeImage(NativeImage.Format.RGBA, TEX_WIDTH, TEX_HEIGHT, false);
+        writePixels(image, pixels);
+
+        DynamicTexture texture = new DynamicTexture(image);
+
+        // Format: paintcraft:dynamic/easel_<x>_<y>_<z>
+        ResourceLocation loc = ResourceLocation.fromNamespaceAndPath(
+                PaintCraft.MODID,
+                "dynamic/easel_" + key.getX() + "_" + key.getY() + "_" + key.getZ());
+
+        Minecraft.getInstance().getTextureManager().register(loc, texture);
+
+        BE_LOCATIONS.put(key, loc);
+        BE_TEXTURES.put(key, texture);
+        BE_PIXELS_HASH.put(key, java.util.Arrays.hashCode(pixels));
+
+        return loc;
     }
 
     /**

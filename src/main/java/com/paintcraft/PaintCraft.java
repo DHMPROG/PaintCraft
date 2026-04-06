@@ -4,9 +4,11 @@ import com.mojang.logging.LogUtils;
 import com.paintcraft.block.ModBlocks;
 import com.paintcraft.blockentity.ModBlockEntities;
 import com.paintcraft.client.PaintingTextureManager;
+import com.paintcraft.client.renderer.EaselBlockEntityRenderer;
 import com.paintcraft.client.renderer.WallPaintingRenderer;
 import com.paintcraft.entity.ModEntityTypes;
 import com.paintcraft.entity.WallPaintingEntity;
+import com.paintcraft.item.ModDataComponents;
 import com.paintcraft.item.ModItems;
 import com.paintcraft.menu.ModMenuTypes;
 import com.paintcraft.network.ModPackets;
@@ -51,6 +53,7 @@ public class PaintCraft {
         // ── Enregistrement de tous nos registres via DeferredRegister ──────────
         ModBlocks.register(modEventBus);
         ModItems.register(modEventBus);
+        ModDataComponents.register(modEventBus);
         ModBlockEntities.register(modEventBus);
         ModMenuTypes.register(modEventBus);
         ModCreativeTabs.register(modEventBus);
@@ -144,7 +147,11 @@ public class PaintCraft {
                     ModEntityTypes.WALL_PAINTING.get(),
                     WallPaintingRenderer::new
             );
-            LOGGER.info("WallPaintingRenderer registered.");
+            event.registerBlockEntityRenderer(
+                    ModBlockEntities.EASEL_BE.get(),
+                    EaselBlockEntityRenderer::new
+            );
+            LOGGER.info("WallPaintingRenderer + EaselBlockEntityRenderer registered.");
         }
     }
 

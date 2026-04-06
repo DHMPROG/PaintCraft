@@ -33,6 +33,13 @@ public class ModBlockEntities {
                             .build(null)
             );
 
+    public static final RegistryObject<BlockEntityType<WallPaintingBlockEntity>> WALL_PAINTING_BE =
+            BLOCK_ENTITIES.register("wall_painting",
+                    () -> BlockEntityType.Builder
+                            .of(WallPaintingBlockEntity::new, ModBlocks.WALL_PAINTING.get())
+                            .build(null)
+            );
+
     public static void register(IEventBus eventBus) {
         BLOCK_ENTITIES.register(eventBus);
     }

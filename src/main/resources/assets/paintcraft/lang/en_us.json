@@ -1,0 +1,15 @@
+{
+  "itemGroup.paintcraft": "PaintCraft",
+
+  "block.paintcraft.easel": "Easel",
+  "block.paintcraft.wall_painting": "Wall Painting",
+
+  "item.paintcraft.canvas": "Blank Canvas",
+  "item.paintcraft.palette": "Painter's Palette",
+  "item.paintcraft.painting_item": "Painted Canvas",
+
+  "item.paintcraft.painting_item.tooltip.painted": "Contains a painting",
+  "item.paintcraft.painting_item.tooltip.blank": "No painting yet",
+
+  "container.paintcraft.painting": "Painting"
+}

@@ -1,0 +1,15 @@
+{
+  "itemGroup.paintcraft": "PaintCraft",
+
+  "block.paintcraft.easel": "Chevalet",
+  "block.paintcraft.wall_painting": "Tableau Mural",
+
+  "item.paintcraft.canvas": "Toile Vierge",
+  "item.paintcraft.palette": "Palette du Peintre",
+  "item.paintcraft.painting_item": "Toile Peinte",
+
+  "item.paintcraft.painting_item.tooltip.painted": "Contient une peinture",
+  "item.paintcraft.painting_item.tooltip.blank": "Aucune peinture",
+
+  "container.paintcraft.painting": "Peinture"
+}

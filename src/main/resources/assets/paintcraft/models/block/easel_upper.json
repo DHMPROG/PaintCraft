@@ -1,0 +1,50 @@
+{
+  "credit": "PaintCraft Mod — Moitie haute du chevalet (sans toile)",
+  "textures": {
+    "wood": "paintcraft:block/easel",
+    "side": "paintcraft:block/easel_side",
+    "top":  "paintcraft:block/easel_top",
+    "particle": "paintcraft:block/easel"
+  },
+  "elements": [
+    {
+      "name": "left_upright",
+      "from": [3, 0, 3],
+      "to": [5, 14, 5],
+      "faces": {
+        "north": {"uv": [3, 2, 5, 16],  "texture": "#wood"},
+        "south": {"uv": [3, 2, 5, 16],  "texture": "#wood"},
+        "east":  {"uv": [3, 2, 5, 16],  "texture": "#side"},
+        "west":  {"uv": [3, 2, 5, 16],  "texture": "#side"},
+        "up":    {"uv": [3, 3, 5, 5],   "texture": "#top"},
+        "down":  {"uv": [3, 3, 5, 5],   "texture": "#top"}
+      }
+    },
+    {
+      "name": "right_upright",
+      "from": [11, 0, 3],
+      "to": [13, 14, 5],
+      "faces": {
+        "north": {"uv": [11, 2, 13, 16], "texture": "#wood"},
+        "south": {"uv": [11, 2, 13, 16], "texture": "#wood"},
+        "east":  {"uv": [11, 2, 13, 16], "texture": "#side"},
+        "west":  {"uv": [11, 2, 13, 16], "texture": "#side"},
+        "up":    {"uv": [11, 3, 13, 5],  "texture": "#top"},
+        "down":  {"uv": [11, 3, 13, 5],  "texture": "#top"}
+      }
+    },
+    {
+      "name": "top_crossbar",
+      "from": [3, 12, 3],
+      "to": [13, 14, 5],
+      "faces": {
+        "north": {"uv": [3, 0, 13, 2],  "texture": "#wood"},
+        "south": {"uv": [3, 0, 13, 2],  "texture": "#wood"},
+        "east":  {"uv": [3, 0, 5, 2],   "texture": "#side"},
+        "west":  {"uv": [3, 0, 5, 2],   "texture": "#side"},
+        "up":    {"uv": [3, 3, 13, 5],  "texture": "#top"},
+        "down":  {"uv": [3, 3, 13, 5],  "texture": "#top"}
+      }
+    }
+  ]
+}
